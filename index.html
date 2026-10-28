@@ -32,7 +32,7 @@ h1{font-size:30px;line-height:1.1;margin:0;font-weight:700;letter-spacing:-.02em
 .prog{margin:20px 0 6px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--mut)}
 .bar{flex:1;height:4px;background:var(--line);border-radius:4px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--acc);border-radius:4px;transition:width .25s}
-.grp{margin:22px 0 4px;font-size:13px;color:var(--mut);font-weight:600}
+.grp{margin:22px 0 0;font-size:14px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between;align-items:center}
 .q{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .q span{flex:1;line-height:1.35;word-break:break-word}
 .q.d span{color:var(--mut);text-decoration:line-through}
@@ -111,7 +111,7 @@ const ICON={stats:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height=
 const L={stats:'Stats',day:'Day',patterns:'Patterns'};
 
 function getDay(k){return S.days[k]||(S.days[k]={q:[],ap:[]})}
-function applyP(k,p){const d=getDay(k);p.items.forEach(it=>d.q.push({id:uid(),t:it.t,time:it.time||'',done:false,p:p.id,pn:p.name}));d.ap.push(p.id)}
+function applyP(k,p){const d=getDay(k),g=uid();p.items.forEach(it=>d.q.push({id:uid(),t:it.t,time:it.time||'',done:false,p:p.id,pn:p.name,g}));if(!d.ap.includes(p.id))d.ap.push(p.id)}
 function auto(k){if(k<today())return;const wd=P(k).getDay();let ch=false;
   S.patterns.forEach(p=>{if(p.days.includes(wd)&&!(S.days[k]&&S.days[k].ap.includes(p.id))){applyP(k,p);ch=true}});
   if(ch)save()}
@@ -125,11 +125,11 @@ function vDay(){auto(cur);const d=S.days[cur]||{q:[],ap:[]},dt=P(cur);
   let h=`<div class="hd"><div><h1>${title}</h1><div class="sub">${sub}</div></div><div class="nav2">${isT?'':'<button class="pill" data-a="today">Dziś</button>'}<button class="ib" data-a="prev" aria-label="Poprzedni dzień">‹</button><button class="ib" data-a="next" aria-label="Następny dzień">›</button></div></div>`;
   h+=`<div class="prog"><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div>${done}/${tot}</div>`;
   const byT=(a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99');const loose=d.q.filter(x=>!x.p).sort(byT);h+=loose.map(row).join('');
-  const seen=[];d.q.forEach(x=>{if(x.p&&!seen.find(s=>s.p===x.p))seen.push({p:x.p,n:x.pn})});
-  seen.forEach(s=>{h+=`<div class="grp">${esc(s.n)}</div>`+d.q.filter(x=>x.p===s.p).sort(byT).map(row).join('')});
-  if(!tot)h+='<div class="empty">Brak questów na ten dzień. Dodaj pierwszy poniżej.</div>';
-  h+=`<div class="add"><input type="text" id="nq" placeholder="Nowy quest" autocomplete="off"><button class="btn pri" data-a="addq">Dodaj</button></div>`;
-  if(S.patterns.length)h+='<button class="link" data-a="pick">Dodaj pattern do tego dnia</button>';
+  const gk=x=>x.g||x.p,seen=[];d.q.forEach(x=>{if(x.p&&!seen.find(s=>s.g===gk(x)))seen.push({g:gk(x),n:x.pn})});
+  seen.forEach(s=>{h+=`<div class="grp"><span>${esc(s.n)}</span><button class="x" data-a="delg" data-g="${s.g}" aria-label="Usuń pattern z dnia">×</button></div>`+d.q.filter(x=>x.p&&gk(x)===s.g).sort(byT).map(row).join('')});
+  if(!tot)h+='<div class="empty">Brak questów na ten dzień. Dodaj pattern poniżej.</div>';
+  h+=S.patterns.length?'<div class="lb">Dodaj pattern</div><div class="chips big">'+S.patterns.map(p=>`<button class="chip" data-a="use" data-id="${p.id}">+ ${esc(p.name)}</button>`).join('')+'</div>':'<div class="empty">Najpierw utwórz pattern w zakładce Patterns.</div>';
+  
   return h}
 
 function vStats(){const y=sm.getFullYear(),m=sm.getMonth(),off=(new Date(y,m,1).getDay()+6)%7,n=new Date(y,m+1,0).getDate();
@@ -186,13 +186,13 @@ document.addEventListener('click',e=>{
   if(a==='tab'){view=el.dataset.t;if(view==='stats'){sm=P(cur);sm.setDate(1);sel=cur}render()}
   else if(a==='tog'){const q=S.days[cur].q.find(x=>x.id===id);q.done=!q.done;save();render()}
   else if(a==='del'){const d=S.days[cur];d.q=d.q.filter(x=>x.id!==id);save();render()}
-  else if(a==='addq')addQ();
+  else if(a==='delg'){const d=S.days[cur];d.q=d.q.filter(x=>!(x.p&&(x.g||x.p)===el.dataset.g));save();render()}
   else if(a==='prev')shift(-1);else if(a==='next')shift(1);
   else if(a==='today'){cur=today();render()}
   else if(a==='pick'){pick=true;render()}
   else if(a==='close'||a==='close2'){pick=false;render()}
-  else if(a==='use'){const p=S.patterns.find(x=>x.id===id),d=getDay(cur);pick=false;
-    if(d.ap.includes(id))toast('Ten pattern jest już dodany');else{applyP(cur,p);save();toast('Dodano: '+p.name)}render()}
+  else if(a==='use'){const p=S.patterns.find(x=>x.id===id);pick=false;
+    applyP(cur,p);save();toast('Dodano: '+p.name);render()}
   else if(a==='mp'){sm=new Date(sm.getFullYear(),sm.getMonth()-1,1);render()}
   else if(a==='mn'){sm=new Date(sm.getFullYear(),sm.getMonth()+1,1);render()}
   else if(a==='sel'){sel=el.dataset.k;render()}
