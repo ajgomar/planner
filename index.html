@@ -46,6 +46,33 @@ input[type=text],input[type=time]{flex:1;min-width:0;background:var(--surf);bord
 input[type=time]{flex:none;width:118px}
 input[type=text]:focus,input[type=time]:focus{border-color:var(--acc)}
 .tm{color:var(--acc);font-weight:600;margin-right:8px;font-size:13px}
+.g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:20px}
+.gw{font-size:12px;color:var(--mut);text-align:center;padding-bottom:4px}
+.k{aspect-ratio:1;border-radius:12px;background:var(--surf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--mut)}
+.k b{font-size:13px;font-weight:700;color:var(--tx)}
+.k.hi,.k.hi b{color:var(--ink)}
+.k.t{box-shadow:0 0 0 1.5px var(--acc)}
+.k.o{background:none}
+.k.e{opacity:.5}
+.sm{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;background:var(--surf);border-radius:16px;padding:16px 4px}
+.sm div{text-align:center;font-size:12px;color:var(--mut)}
+.sm div+div{border-left:1px solid var(--line)}
+.sm b{display:block;font-size:22px;color:var(--tx);margin-bottom:2px}
+.sw{display:flex;align-items:center;gap:12px;margin-top:16px;text-align:left;font-size:15px}
+.sw i{width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--tx);transition:transform .15s}
+.sw.on i{background:var(--acc)}
+.sw.on i::after{transform:translateX(18px);background:var(--ink)}
+.hint{color:var(--mut);font-size:13px;margin-top:12px}
+.tg{float:right;font-size:12px;font-weight:500;color:var(--mut);margin-top:4px}
+.ov.top{z-index:25}
+.tp{display:flex;justify-content:center;align-items:center;gap:6px;position:relative;height:200px}
+.band{position:absolute;left:50%;top:80px;height:40px;width:210px;transform:translateX(-50%);border-radius:10px;background:var(--surf);border:1px solid var(--line);pointer-events:none}
+.wh{position:relative;z-index:1;height:200px;width:84px;overflow-y:scroll;scroll-snap-type:y mandatory;padding:80px 0;scrollbar-width:none;text-align:center;overscroll-behavior:contain}
+.wh::-webkit-scrollbar{display:none}
+.wh div{height:40px;line-height:40px;scroll-snap-align:center;font-size:22px;font-weight:600;color:var(--mut)}
+.wh div.on{color:var(--tx)}
+.co{font-size:22px;font-weight:700;position:relative;z-index:1}
 .btn{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:0 16px;height:46px;font-weight:600}
 .pri{background:var(--acc);color:var(--ink);border-color:var(--acc)}
 .link{color:var(--acc);margin-top:16px;font-size:15px;font-weight:500}
@@ -91,7 +118,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 <body>
 <div id="app"><div id="main"></div>
 <nav class="tabs" id="tabs"></nav></div>
-<div id="ov"></div>
+<div id="ov"></div><div id="ov2"></div>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -103,9 +130,9 @@ const today=()=>K(new Date());
 const ORD=[1,2,3,4,5,6,0],WL={1:'Pn',2:'Wt',3:'Śr',4:'Cz',5:'Pt',6:'Sb',0:'Nd'};
 let S={patterns:[],days:{}};
 try{const r=localStorage.getItem('planner-v1');if(r)S=JSON.parse(r)}catch(e){}
-S.patterns.forEach(p=>{p.items=p.items.map(i=>typeof i==='string'?{t:i,time:''}:i)});
+S.patterns.forEach(p=>{p.items=p.items.map(i=>typeof i==='string'?{t:i,time:''}:i);if(p.auto===undefined)p.auto=true});
 const save=()=>{try{localStorage.setItem('planner-v1',JSON.stringify(S))}catch(e){}};
-let view='day',cur=today(),sm=new Date(),sel=null,ed=null,pick=false;
+let view='day',cur=today(),sm=new Date(),sel=null,ed=null,pick=false,tp=null;
 const CHK='<svg viewBox="0 0 16 16" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
 const ICON={stats:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',day:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',patterns:'<svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h10"/><circle cx="18" cy="7" r="1.6"/><circle cx="18" cy="17" r="1.6"/></svg>'};
 const L={stats:'Stats',day:'Day',patterns:'Patterns'};
@@ -113,7 +140,7 @@ const L={stats:'Stats',day:'Day',patterns:'Patterns'};
 function getDay(k){return S.days[k]||(S.days[k]={q:[],ap:[]})}
 function applyP(k,p){const d=getDay(k),g=uid();p.items.forEach(it=>d.q.push({id:uid(),t:it.t,time:it.time||'',done:false,p:p.id,pn:p.name,g}));if(!d.ap.includes(p.id))d.ap.push(p.id)}
 function auto(k){if(k<today())return;const wd=P(k).getDay();let ch=false;
-  S.patterns.forEach(p=>{if(p.days.includes(wd)&&!(S.days[k]&&S.days[k].ap.includes(p.id))){applyP(k,p);ch=true}});
+  S.patterns.forEach(p=>{if(p.auto&&p.days.includes(wd)&&!(S.days[k]&&S.days[k].ap.includes(p.id))){applyP(k,p);ch=true}});
   if(ch)save()}
 function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),1800)}
 
@@ -128,11 +155,20 @@ function vDay(){auto(cur);const d=S.days[cur]||{q:[],ap:[]},dt=P(cur);
   const gk=x=>x.g||x.p,seen=[];d.q.forEach(x=>{if(x.p&&!seen.find(s=>s.g===gk(x)))seen.push({g:gk(x),n:x.pn})});
   seen.forEach(s=>{h+=`<div class="grp"><span>${esc(s.n)}</span><button class="x" data-a="delg" data-g="${s.g}" aria-label="Usuń pattern z dnia">×</button></div>`+d.q.filter(x=>x.p&&gk(x)===s.g).sort(byT).map(row).join('')});
   if(!tot)h+='<div class="empty">Brak questów na ten dzień. Dodaj pattern poniżej.</div>';
-  h+=S.patterns.length?'<div class="lb">Dodaj pattern</div><div class="chips big">'+S.patterns.map(p=>`<button class="chip" data-a="use" data-id="${p.id}">+ ${esc(p.name)}</button>`).join('')+'</div>':'<div class="empty">Najpierw utwórz pattern w zakładce Patterns.</div>';
+  const av=S.patterns.filter(p=>!p.days.length||p.days.includes(dt.getDay()));h+=av.length?'<div class="lb">Dodaj pattern</div><div class="chips big">'+av.map(p=>`<button class="chip" data-a="use" data-id="${p.id}">+ ${esc(p.name)}</button>`).join('')+'</div>':'<div class="empty">'+(S.patterns.length?'Brak patternów dostępnych w ten dzień tygodnia.':'Najpierw utwórz pattern w zakładce Patterns.')+'</div>';
   
   return h}
 
 function vStats(){const y=sm.getFullYear(),m=sm.getMonth(),off=(new Date(y,m,1).getDay()+6)%7,n=new Date(y,m+1,0).getDate();
+  let D=0,T=0,F=0,c='';
+  for(let i=0;i<off;i++)c+='<div class="k o"></div>';
+  for(let i=1;i<=n;i++){const k=y+'-'+pad(m+1)+'-'+pad(i),d=S.days[k],tot=d?d.q.length:0,dn=d?d.q.filter(x=>x.done).length:0,pc=tot?dn/tot:0;
+    D+=dn;T+=tot;if(tot&&dn===tot)F++;
+    const st=tot?` style="background:color-mix(in srgb,var(--acc) ${Math.round(pc*85)}%,var(--line))"`:'';
+    c+=`<div class="k ${tot?'':'e'} ${pc>.55?'hi':''} ${k===today()?'t':''}"${st}><span>${i}</span>${tot?`<b>${dn}/${tot}</b>`:''}</div>`}
+  const mn=sm.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});
+  return `<div class="hd"><h1>${mn}</h1><div class="nav2"><button class="ib" data-a="mp" aria-label="Poprzedni miesiąc">‹</button><button class="ib" data-a="mn" aria-label="Następny miesiąc">›</button></div></div><div class="sm"><div><b>${D}/${T}</b>questy</div><div><b>${T?Math.round(D/T*100):0}%</b>skuteczność</div><div><b>${F}</b>dni 100%</div></div><div class="g">${ORD.map(i=>`<div class="gw">${WL[i]}</div>`).join('')}${c}</div>`}
+function vStatsOld(){const y=sm.getFullYear(),m=sm.getMonth(),off=(new Date(y,m,1).getDay()+6)%7,n=new Date(y,m+1,0).getDate();
   let D=0,T=0,A=0,c='';
   for(let i=0;i<off;i++)c+='<div class="c o"></div>';
   for(let i=1;i<=n;i++){const k=y+'-'+pad(m+1)+'-'+pad(i),d=S.days[k],tot=d?d.q.length:0,dn=d?d.q.filter(x=>x.done).length:0,pc=tot?dn/tot:0;
@@ -151,7 +187,7 @@ function vStats(){const y=sm.getFullYear(),m=sm.getMonth(),off=(new Date(y,m,1).
   return h}
 
 function vPat(){let h=`<div class="hd"><div><h1>Patterns</h1><div class="sub">Powtarzalne zestawy questów</div></div></div>`;
-  h+=S.patterns.map(p=>`<button class="card" data-a="edit" data-id="${p.id}"><h3>${esc(p.name)}</h3><div class="chips">${ORD.map(i=>`<span class="chip ${p.days.includes(i)?'on':''}">${WL[i]}</span>`).join('')}</div><p>${p.items.length?p.items.map(i=>(i.time?i.time+' ':'')+esc(i.t)).join(', '):'Brak checkboxów'}</p></button>`).join('');
+  h+=S.patterns.map(p=>`<button class="card" data-a="edit" data-id="${p.id}"><h3>${esc(p.name)}${p.days.length?'<span class="tg">'+(p.auto?'auto':'ręcznie')+'</span>':''}</h3><div class="chips">${ORD.map(i=>`<span class="chip ${p.days.includes(i)?'on':''}">${WL[i]}</span>`).join('')}</div><p>${p.items.length?p.items.map(i=>(i.time?i.time+' ':'')+esc(i.t)).join(', '):'Brak checkboxów'}</p></button>`).join('');
   if(!S.patterns.length)h+='<div class="empty">Brak patternów.</div>';
   h+='<div class="add"><button class="btn pri" style="flex:1" data-a="newp">Nowy pattern</button></div>';
   return h}
@@ -161,11 +197,11 @@ function vSheet(){
   if(!ed)return '';
   return `<div class="ov"><div class="sheet"><h2>${ed.id?'Edytuj pattern':'Nowy pattern'}</h2>
   <input type="text" id="pn" value="${esc(ed.name)}" aria-label="Nazwa patternu" autocomplete="off" style="width:100%">
-  <div class="lb">Dni tygodnia (dodaje się automatycznie)</div>
-  <div class="chips big">${ORD.map(i=>`<button class="chip ${ed.days.includes(i)?'on':''}" data-a="dtog" data-i="${i}">${WL[i]}</button>`).join('')}</div>
+  <div class="lb">Dostępny w dni</div>
+  <div class="chips big">${ORD.map(i=>`<button class="chip ${ed.days.includes(i)?'on':''}" data-a="dtog" data-i="${i}">${WL[i]}</button>`).join('')}</div>${ed.days.length?`<button class="sw ${ed.auto?'on':''}" data-a="atog"><i></i><span>Dodawaj automatycznie w te dni</span></button>`:'<div class="hint">Bez wybranych dni pattern można dodać w każdy dzień.</div>'}
   <div class="lb">Checkboxy</div>
   ${ed.items.map((t,i)=>`<div class="q" style="cursor:default"><div class="cb"></div><span>${t.time?'<small class="tm">'+t.time+'</small>':''}${esc(t.t)}</span><button class="x" data-a="idel" data-i="${i}" aria-label="Usuń">×</button></div>`).join('')}
-  <div class="add" style="margin-top:12px"><input type="text" id="pi" aria-label="Nowy checkbox" autocomplete="off"><input type="time" id="pt" aria-label="Godzina"><button class="btn" data-a="iadd">+</button></div>
+  <div class="add" style="margin-top:12px"><input type="text" id="pi" value="${esc(ed.draft||'')}" aria-label="Nowy checkbox" autocomplete="off"><button class="btn" id="ptb" data-a="tp" aria-label="Wybierz godzinę">${ed.time||'Godzina'}</button><button class="btn" data-a="iadd">+</button></div>
   <div class="row"><button class="btn" data-a="edx">Anuluj</button>${ed.id?`<button class="btn danger" data-a="pdel">${ed.cd?'Na pewno?':'Usuń'}</button>`:''}<button class="btn pri" data-a="eds">Zapisz</button></div></div></div>`}
 
 function render(){
@@ -174,10 +210,19 @@ function render(){
   $('#ov').innerHTML=vSheet()}
 
 function addQ(){const i=$('#nq');const t=i.value.trim();if(!t)return;getDay(cur).q.push({id:uid(),t,done:false,p:null,pn:null});save();render();$('#nq').focus()}
-function addI(){const i=$('#pi');const t=i.value.trim();if(t){ed.items.push({t,time:$('#pt').value});ed.cd=false;render();$('#pi').focus()}}
+function addI(){const i=$('#pi');const t=i.value.trim();if(t){ed.items.push({t,time:ed.time||''});ed.time='';ed.draft='';ed.cd=false;render();$('#pi').focus()}}
 function shift(n){const d=P(cur);d.setDate(d.getDate()+n);cur=K(d);render()}
+function updT(){const b=$('#ptb');if(b)b.textContent=ed&&ed.time?ed.time:'Godzina'}
+function renderTP(){const o=$('#ov2');if(!tp){o.innerHTML='';return}
+  const col=(n,v,c)=>`<div class="wh" data-c="${c}">${Array.from({length:n},(_,i)=>`<div class="${i===v?'on':''}">${pad(i)}</div>`).join('')}</div>`;
+  o.innerHTML=`<div class="ov top" data-a="tpc"><div class="sheet"><h2>Godzina</h2><div class="tp"><div class="band"></div>${col(24,tp.h,'h')}<span class="co">:</span>${col(60,tp.m,'m')}</div><div class="row"><button class="btn" data-a="tpx">Bez godziny</button><button class="btn pri" data-a="tpd">Gotowe</button></div></div></div>`;
+  o.querySelectorAll('.wh').forEach(w=>{w.scrollTop=(w.dataset.c==='h'?tp.h:tp.m)*40})}
+document.addEventListener('scroll',e=>{const w=e.target;if(!tp||!w.classList||!w.classList.contains('wh'))return;
+  const i=Math.max(0,Math.min(w.children.length-1,Math.round(w.scrollTop/40)));
+  if(w.dataset.c==='h')tp.h=i;else tp.m=i;
+  const on=w.querySelector('.on');if(on!==w.children[i]){if(on)on.classList.remove('on');w.children[i].classList.add('on')}},true);
 
-document.addEventListener('input',e=>{if(e.target.id==='pn'&&ed)ed.name=e.target.value});
+document.addEventListener('input',e=>{if(!ed)return;if(e.target.id==='pn')ed.name=e.target.value;if(e.target.id==='pi')ed.draft=e.target.value});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='nq')addQ();if(e.target.id==='pi'){e.preventDefault();addI()}});
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-a]');if(!el)return;
@@ -192,22 +237,28 @@ document.addEventListener('click',e=>{
   else if(a==='pick'){pick=true;render()}
   else if(a==='close'||a==='close2'){pick=false;render()}
   else if(a==='use'){const p=S.patterns.find(x=>x.id===id);pick=false;
+    if(p.days.length&&!p.days.includes(P(cur).getDay())){toast('Ten pattern jest dostępny tylko w wybrane dni');return}
     applyP(cur,p);save();toast('Dodano: '+p.name);render()}
   else if(a==='mp'){sm=new Date(sm.getFullYear(),sm.getMonth()-1,1);render()}
   else if(a==='mn'){sm=new Date(sm.getFullYear(),sm.getMonth()+1,1);render()}
   else if(a==='sel'){sel=el.dataset.k;render()}
   else if(a==='open'){cur=el.dataset.k;view='day';render()}
-  else if(a==='newp'){ed={id:null,name:'',days:[],items:[]};render();$('#pn').focus()}
-  else if(a==='edit'){const p=S.patterns.find(x=>x.id===id);ed={id:p.id,name:p.name,days:[...p.days],items:p.items.map(i=>({...i}))};render()}
+  else if(a==='newp'){ed={id:null,name:'',days:[],items:[],auto:true,time:'',draft:''};render();$('#pn').focus()}
+  else if(a==='atog'){ed.auto=!ed.auto;render()}
+  else if(a==='tp'){const[h,m]=(ed.time||'08:00').split(':').map(Number);tp={h,m};renderTP()}
+  else if(a==='tpc'){tp=null;renderTP()}
+  else if(a==='tpx'){ed.time='';tp=null;renderTP();updT()}
+  else if(a==='tpd'){ed.time=pad(tp.h)+':'+pad(tp.m);tp=null;renderTP();updT()}
+  else if(a==='edit'){const p=S.patterns.find(x=>x.id===id);ed={id:p.id,name:p.name,days:[...p.days],items:p.items.map(i=>({...i})),auto:p.auto!==false,time:'',draft:''};render()}
   else if(a==='dtog'){const i=+el.dataset.i;ed.days=ed.days.includes(i)?ed.days.filter(x=>x!==i):[...ed.days,i];render()}
   else if(a==='iadd')addI();
   else if(a==='idel'){ed.items.splice(+el.dataset.i,1);render()}
   else if(a==='edx'){ed=null;render()}
   else if(a==='pdel'){if(!ed.cd){ed.cd=true;render();return}S.patterns=S.patterns.filter(p=>p.id!==ed.id);ed=null;save();render()}
-  else if(a==='eds'){const pi=$('#pi');if(pi&&pi.value.trim())ed.items.push({t:pi.value.trim(),time:$('#pt').value});
+  else if(a==='eds'){const pi=$('#pi');if(pi&&pi.value.trim())ed.items.push({t:pi.value.trim(),time:ed.time||''});
     const name=ed.name.trim();if(!name){toast('Podaj nazwę patternu');return}
-    if(ed.id){const p=S.patterns.find(x=>x.id===ed.id);p.name=name;p.days=ed.days;p.items=ed.items}
-    else S.patterns.push({id:uid(),name,days:ed.days,items:ed.items});
+    if(ed.id){const p=S.patterns.find(x=>x.id===ed.id);p.name=name;p.days=ed.days;p.items=ed.items;p.auto=ed.auto}
+    else S.patterns.push({id:uid(),name,days:ed.days,items:ed.items,auto:ed.auto});
     ed=null;save();render()}
 });
 render();
